@@ -1,20 +1,24 @@
 <script lang="ts">
   import { supabase } from "$lib/supabase"; // Import Supabase client
-  
 
   // Reactive profile data
   let userProfile = {
-    bgImage: "images/bg-img.png",
-    profileImg: "images/profile-img.jpeg",
-    username: "Ashish Chanchlani",
-    handle: "@ashishchanchlani",
-    location: "Mumbai, India",
-    hobbies: ["Comedy", "Entertainment", "Social Media", "TikTok"],
-    description: `Ashish Chanchlani is a famous Youtuber who recently started trending after his drastic weight loss. In the recent episode of Honestly Saying Podcast, Ashish opened up about his weight loss journey and what inspired him to lose weight and get into a healthy fitness routine`,
+    bgImage: "images/bg-image.png",
+    profileImg: "images/default-profile.jpeg",
+    username: "Name",
+    handle: "@username",
+    location: "City",
+    hobbies: ["hobbies"],
+    description: `About You`,
   };
 
   let showPopup = false;
   let editingTarget = ""; // 'bgImage' or 'profileImg'
+
+  // Function to save user profile to local storage
+  function saveProfileToLocalStorage() {
+    localStorage.setItem("userProfile", JSON.stringify(userProfile));
+  }
 
   // Fetch profile data from Supabase
   async function fetchProfileData() {
@@ -27,7 +31,6 @@
     if (error) {
       console.error("Error fetching profile data:", error.message);
     } else {
-      // Update the userProfile with fetched data
       userProfile = {
         ...userProfile,
         username: data.username || userProfile.username,
@@ -38,53 +41,17 @@
         bgImage: data.bgImage || userProfile.bgImage,
         profileImg: data.profileImg || userProfile.profileImg,
       };
+      saveProfileToLocalStorage(); // Save fetched data to local storage
+      console.log('Fetched Profile:', data); // Debugging output
     }
   }
 
-  function editProfile() {
-    // Navigate to edit profile page (adjusting for Svelte routing)
-    location.href = "/edit-profile";
-  }
-
-  function viewConnections() {
-    // Handle viewing connections logic here
-    alert("View connections clicked!");
-  }
-
-  function openEditPopup(target: string) {
-    editingTarget = target;
-    showPopup = true;
-  }
-
-  function closePopup() {
-    showPopup = false;
-  }
-
-  function removeImage() {
-    userProfile[editingTarget] = ""; // Clear the image
-    closePopup();
-  }
-
-  function changeImage(event) {
-    // Logic to change the image
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        userProfile[editingTarget] = reader.result as string;
-        closePopup();
-      };
-      reader.readAsDataURL(file);
-    }
-  }
-
-  // Real-time data listener for profile changes (you can also set up other triggers)
+  // Real-time data listener for profile changes
   function setupRealtime() {
     supabase
       .from("profiles")
       .on("UPDATE", (payload) => {
         console.log("Change received!", payload);
-        // Update user profile with the real-time data
         userProfile = {
           ...userProfile,
           username: payload.new.username || userProfile.username,
@@ -97,15 +64,73 @@
           bgImage: payload.new.bgImage || userProfile.bgImage,
           profileImg: payload.new.profileImg || userProfile.profileImg,
         };
+        saveProfileToLocalStorage(); // Save real-time updates to local storage
       })
       .subscribe();
   }
 
-  // Fetch profile data when the component is mounted
+  // Update profile image in Supabase
+  async function updateProfileImage(target: string, newValue: string) {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ [target]: newValue })
+      .eq("id", "your_user_id"); // Replace with your user identifier
+
+    if (error) {
+      console.error("Error updating profile image:", error.message);
+    }
+  }
+
+  // Edit profile and view connections (dummy functions for now)
+  function editProfile() {
+    location.href = "/edit-profile";
+  }
+
+  function viewConnections() {
+    alert("View connections clicked!");
+  }
+
+  // Handle image change
+  function openEditPopup(target: string) {
+    editingTarget = target;
+    showPopup = true;
+  }
+
+  function closePopup() {
+    showPopup = false;
+  }
+
+  function removeImage() {
+    userProfile[editingTarget] = ""; // Clear the image
+    saveProfileToLocalStorage();
+    updateProfileImage(editingTarget, ""); // Update Supabase (optional)
+    closePopup();
+  }
+
+  function changeImage(event) {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        userProfile[editingTarget] = reader.result as string;
+        saveProfileToLocalStorage(); // Save updated profile
+        updateProfileImage(editingTarget, userProfile[editingTarget]); // Update Supabase (optional)
+        closePopup();
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  // Load profile data on mount
   import { onMount } from "svelte";
   onMount(() => {
-    fetchProfileData();
-    setupRealtime(); // Set up the real-time listener
+    const storedProfile = localStorage.getItem("userProfile");
+    if (storedProfile) {
+      userProfile = JSON.parse(storedProfile);
+    } else {
+      fetchProfileData(); // Fetch from Supabase if no local storage data
+    }
+    setupRealtime(); // Set up real-time listener
   });
 </script>
 
@@ -115,8 +140,7 @@
     <button
       class="edit-icon"
       on:click={() => openEditPopup("bgImage")}
-      title="Edit Background">✏️</button
-    >
+      title="Edit Background">✏️</button>
   </div>
   <div class="profile-container">
     <div class="edit-container">
@@ -128,8 +152,7 @@
       <button
         class="edit-icon-profile"
         on:click={() => openEditPopup("profileImg")}
-        title="Edit Profile Picture">✏️</button
-      >
+        title="Edit Profile Picture">✏️</button>
     </div>
     <div class="username">{userProfile.username}</div>
     <div class="handle">{userProfile.handle}</div>
@@ -142,9 +165,9 @@
     <div class="description">{userProfile.description}</div>
     <div class="button-container">
       <button class="btn btn-edit" on:click={editProfile}>Edit Profile</button>
-      <button class="btn btn-view" on:click={viewConnections}
-        >View Connections</button
-      >
+      <button class="btn btn-view" on:click={viewConnections}>
+        View Connections
+      </button>
     </div>
   </div>
 
@@ -158,6 +181,9 @@
     </div>
   {/if}
 </div>
+
+
+
 
 <style>
   /* Profile */
