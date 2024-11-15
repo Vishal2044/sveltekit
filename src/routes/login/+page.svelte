@@ -20,7 +20,7 @@
     } else {
       const user = data.user;
       if (user) {
-        goto('/profile');
+        goto('/edit-profile');
       } else {
         errorMessage = 'User not found';
       }
