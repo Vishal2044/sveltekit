@@ -15,11 +15,6 @@
   let showPopup = false;
   let editingTarget = ""; // 'bgImage' or 'profileImg'
 
-  // Function to save user profile to local storage
-  function saveProfileToLocalStorage() {
-    localStorage.setItem("userProfile", JSON.stringify(userProfile));
-  }
-
   // Fetch profile data from Supabase
   async function fetchProfileData() {
     const { data, error } = await supabase
@@ -41,7 +36,6 @@
         bgImage: data.bgImage || userProfile.bgImage,
         profileImg: data.profileImg || userProfile.profileImg,
       };
-      saveProfileToLocalStorage(); // Save fetched data to local storage
       console.log('Fetched Profile:', data); // Debugging output
     }
   }
@@ -64,7 +58,6 @@
           bgImage: payload.new.bgImage || userProfile.bgImage,
           profileImg: payload.new.profileImg || userProfile.profileImg,
         };
-        saveProfileToLocalStorage(); // Save real-time updates to local storage
       })
       .subscribe();
   }
@@ -102,7 +95,6 @@
 
   function removeImage() {
     userProfile[editingTarget] = ""; // Clear the image
-    saveProfileToLocalStorage();
     updateProfileImage(editingTarget, ""); // Update Supabase (optional)
     closePopup();
   }
@@ -113,7 +105,6 @@
       const reader = new FileReader();
       reader.onload = () => {
         userProfile[editingTarget] = reader.result as string;
-        saveProfileToLocalStorage(); // Save updated profile
         updateProfileImage(editingTarget, userProfile[editingTarget]); // Update Supabase (optional)
         closePopup();
       };
@@ -124,12 +115,7 @@
   // Load profile data on mount
   import { onMount } from "svelte";
   onMount(() => {
-    const storedProfile = localStorage.getItem("userProfile");
-    if (storedProfile) {
-      userProfile = JSON.parse(storedProfile);
-    } else {
-      fetchProfileData(); // Fetch from Supabase if no local storage data
-    }
+    fetchProfileData(); // Fetch from Supabase on mount
     setupRealtime(); // Set up real-time listener
   });
 </script>
@@ -181,6 +167,7 @@
     </div>
   {/if}
 </div>
+
 
 
 
